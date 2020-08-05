@@ -99,7 +99,11 @@ AbcArchiveHandle *ABC_create_handle(struct Main *bmain,
                                     const char *filename,
                                     struct ListBase *object_paths);
 
+void duplicatelist_alembicobjectpath(struct ListBase *dst, const struct ListBase *src);
+
 void ABC_free_handle(AbcArchiveHandle *handle);
+
+void ABC_free_object_path(struct ListBase *listbase);
 
 void ABC_get_transform(struct CacheReader *reader,
                        float r_mat_world[4][4],

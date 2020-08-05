@@ -82,6 +82,7 @@ static void cache_file_free_data(ID *id)
 {
   CacheFile *cache_file = (CacheFile *)id;
   cachefile_handle_free(cache_file);
+  ABC_free_object_path(&cache_file->object_paths);
   BLI_freelistN(&cache_file->object_paths);
 }
 
@@ -254,6 +255,7 @@ void BKE_cachefile_eval(Main *bmain, Depsgraph *depsgraph, CacheFile *cache_file
   }
 
   cachefile_handle_free(cache_file);
+  ABC_free_object_path(&cache_file->object_paths);
   BLI_freelistN(&cache_file->object_paths);
 
 #ifdef WITH_ALEMBIC
@@ -265,7 +267,7 @@ void BKE_cachefile_eval(Main *bmain, Depsgraph *depsgraph, CacheFile *cache_file
     /* Flush object paths back to original datablock for UI. */
     CacheFile *cache_file_orig = (CacheFile *)DEG_get_original_id(&cache_file->id);
     BLI_freelistN(&cache_file_orig->object_paths);
-    BLI_duplicatelist(&cache_file_orig->object_paths, &cache_file->object_paths);
+    duplicatelist_alembicobjectpath(&cache_file_orig->object_paths, &cache_file->object_paths);
   }
 }
 

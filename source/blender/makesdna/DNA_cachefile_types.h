@@ -48,8 +48,8 @@ enum {
  * Note that this is not a file path. */
 typedef struct AlembicObjectPath {
   struct AlembicObjectPath *next, *prev;
-
-  char path[4096];
+  
+  char *path;
 } AlembicObjectPath;
 
 /* CacheFile::velocity_unit

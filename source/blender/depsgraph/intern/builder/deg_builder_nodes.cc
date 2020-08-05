@@ -119,6 +119,9 @@
 #include "intern/node/deg_node_id.h"
 #include "intern/node/deg_node_operation.h"
 
+#include <thread>         
+#include <chrono>
+
 namespace blender {
 namespace deg {
 
@@ -1673,6 +1676,10 @@ void DepsgraphNodeBuilder::build_cachefile(CacheFile *cache_file)
   build_animdata(cache_file_id);
   build_parameters(cache_file_id);
   /* Cache evaluation itself. */
+
+  /*prevents BKE_cachefile_eval executing too early, while visit_object did not finish*/
+  std::this_thread::sleep_for (std::chrono::seconds(10));
+
   add_operation_node(cache_file_id,
                      NodeType::CACHE,
                      OperationCode::FILE_CACHE_UPDATE,
@@ -1819,9 +1826,9 @@ void DepsgraphNodeBuilder::build_scene_sequencer(Scene *scene)
   if (scene->ed == nullptr) {
     return;
   }
-  if (built_map_.checkIsBuiltAndTag(scene, BuilderMap::TAG_SCENE_SEQUENCER)) {
+    if (built_map_.checkIsBuiltAndTag(scene, BuilderMap::TAG_SCENE_SEQUENCER)) {
     return;
-  }
+    }
   build_scene_audio(scene);
   Scene *scene_cow = get_cow_datablock(scene);
   add_operation_node(&scene->id,

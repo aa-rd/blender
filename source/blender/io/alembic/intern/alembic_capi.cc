@@ -151,8 +151,7 @@ static bool gather_objects_paths(const IObject &object, ListBase *object_paths)
   if (get_path) {
     void *abc_path_void = MEM_callocN(sizeof(AlembicObjectPath), "AlembicObjectPath");
     AlembicObjectPath *abc_path = static_cast<AlembicObjectPath *>(abc_path_void);
-
-    BLI_strncpy(abc_path->path, object.getFullName().c_str(), sizeof(abc_path->path));
+    abc_path->path = BLI_strdupn(object.getFullName().c_str(), sizeof(object.getFullName().c_str()));
     BLI_addtail(object_paths, abc_path);
   }
 
@@ -177,9 +176,61 @@ AbcArchiveHandle *ABC_create_handle(struct Main *bmain,
   return handle_from_archive(archive);
 }
 
+/**
+ * Duplicates a list, in case of lists of AlembicObjectPath
+ * Duplicates src into dst, and the allocated data within it
+ * To delete it, call ABC_free_object_path and then BLI_freelistN
+ */
+void duplicatelist_alembicobjectpath(ListBase *dst, const ListBase *src)
+{
+  AlembicObjectPath *dst_prev_link; //previous destination list (1 node before current)
+  AlembicObjectPath *dst_link; //destination list (current)
+  AlembicObjectPath *src_link; //source list
+
+  src_link = static_cast<AlembicObjectPath *>(src->first);
+  dst->first = dst->last = nullptr;
+  dst_prev_link = static_cast<AlembicObjectPath*>(MEM_callocN(sizeof(struct AlembicObjectPath), "TODO"));
+  dst_prev_link->prev = nullptr;
+
+  while(src_link)
+  {
+    if(!src_link->next)
+    {
+      dst_prev_link->path = BLI_strdupn(src_link->path, sizeof(src_link->path));
+      dst_prev_link->next = nullptr;
+      BLI_addtail(dst, dst_prev_link);
+ 
+      src_link = src_link->next;
+    }
+    else
+    {
+      dst_link = static_cast<AlembicObjectPath*>(MEM_callocN(sizeof(struct AlembicObjectPath), "TODO"));
+      dst_link->prev = dst_prev_link;
+      dst_prev_link->next = dst_link;
+      dst_prev_link->path = BLI_strdupn(src_link->path, sizeof(src_link->path));
+      BLI_addtail(dst, dst_prev_link);
+
+      dst_prev_link = dst_link;
+      src_link = src_link->next;
+    }
+  }
+}
+
 void ABC_free_handle(AbcArchiveHandle *handle)
 {
   delete archive_from_handle(handle);
+}
+
+void ABC_free_object_path(ListBase *listbase)
+{
+  AlembicObjectPath *link_aop, *next_aop;
+  link_aop = static_cast<AlembicObjectPath*>(listbase->first);
+
+  while (link_aop) {
+    next_aop = link_aop->next;
+    MEM_freeN(link_aop->path);
+    link_aop = next_aop;
+  }
 }
 
 int ABC_get_version()
@@ -360,9 +411,9 @@ static std::pair<bool, AbcObjectReader *> visit_object(
 
     AlembicObjectPath *abc_path = static_cast<AlembicObjectPath *>(
         MEM_callocN(sizeof(AlembicObjectPath), "AlembicObjectPath"));
-    BLI_strncpy(abc_path->path, full_name.c_str(), sizeof(abc_path->path));
+    abc_path->path = BLI_strdupn(full_name.c_str(), sizeof(full_name.c_str()));
     BLI_addtail(&settings.cache_file->object_paths, abc_path);
-
+   
     /* We can now assign this reader as parent for our children. */
     if (nonclaiming_child_readers.size() + assign_as_parent.size() > 0) {
       for (AbcObjectReader *child_reader : nonclaiming_child_readers) {
@@ -406,7 +457,7 @@ static std::pair<bool, AbcObjectReader *> visit_object(
     }
   }
 
-  return std::make_pair(parent_is_part_of_this_object, reader);
+  return std::make_pair(parent_is_part_of_this_object, reader);  
 }
 
 enum {
